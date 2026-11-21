@@ -69,10 +69,9 @@ jobs:
                   context: .
                   file: "Dockerfile.${{ matrix.flavor }}"
                   push: true
-                  # ghcr.io/${{ github.repository }} not used, to match dockerhub image naming
                   tags: |
-                    ghcr.io/pgautoupgrade/pgautoupgrade:${{ env.BRANCH_NAME }}-${{ matrix.alias }}
-                    ghcr.io/pgautoupgrade/pgautoupgrade:${{ env.HEAD_SHA }}-${{ matrix.alias }}
+                    ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ matrix.alias }}
+                    ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.HEAD_SHA }}-${{ matrix.alias }}
                   labels: ${{ steps.meta.outputs.labels }}
                   platforms: linux/amd64,linux/arm64
                   cache-to: type=inline
@@ -87,5 +86,5 @@ jobs:
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-15-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-16-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-17-${{ matrix.flavor }}
-                    type=registry,ref=ghcr.io/pgautoupgrade/pgautoupgrade:${{ env.BRANCH_NAME }}-${{ matrix.alias }}
-                    type=registry,ref=ghcr.io/pgautoupgrade/pgautoupgrade:${{ env.HEAD_SHA }}-${{ matrix.alias }}
+                    type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ matrix.alias }}
+                    type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.HEAD_SHA }}-${{ matrix.alias }}
