@@ -36,6 +36,7 @@ server:
 		pgautoupgrade/pgautoupgrade:local
 
 test:
+	bash ./test/test-version-support.sh
 	./test.sh
 
 up:

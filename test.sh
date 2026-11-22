@@ -4,7 +4,7 @@ set -ex
 FAILURE=0
 
 # Array of PostgreSQL versions for testing
-PG_VERSIONS=(16 17 18)
+PG_VERSIONS=(16 17 18 19)
 
 # Useful output display
 banner() {
@@ -43,10 +43,10 @@ test_run() {
     FLAVOR=$3
 
     local TARGET_MAJOR=${PGTARGET%%.*}
-    if [ "$TARGET_MAJOR" -eq 18 ]; then
+    if [ "$TARGET_MAJOR" -ge 18 ]; then
         PGAUTO_COMPOSE="docker-compose-pgauto18.yml"
         PGTARGET_COMPOSE="docker-compose-pgtarget18.yml"
-        PGVERSION_FILE="postgres-data/18/docker/PG_VERSION"
+        PGVERSION_FILE="postgres-data/${TARGET_MAJOR}/docker/PG_VERSION"
     else
         PGAUTO_COMPOSE="docker-compose-pgauto.yml"
         PGTARGET_COMPOSE="docker-compose-pgtarget.yml"

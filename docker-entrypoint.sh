@@ -22,33 +22,36 @@ if [ -n $POSTGRESQL_PASSWORD ] && [ -z $POSTGRES_PASSWORD ]; then
     export POSTGRES_PASSWORD=$POSTGRESQL_PASSWORD
 fi
 
+source /usr/local/bin/postgres-docker-entrypoint.sh
+docker_find_database
+
 # if a valid PGDATA exists, the database directory is likely already initialized
 # if coming from a Bitnami image, we need to inject a postgresql.conf and pg_hba.conf file
 # and if they requested "one shot" mode, we will remove it again so they can continue to use the Bitnami image
-if [ -d "$PGDATA" ] && [ -f "$PGDATA/PG_VERSION" ]; then
+if [ -d "$PGAUTO_SOURCE_PGDATA" ] && [ -f "$PGAUTO_SOURCE_PGDATA/PG_VERSION" ]; then
     POSTGRESQL_DATA_DIRECTORY_HAS_DATA=1
 
-    EXISTING_PGDATA_PERMISSIONS=$(stat -c %a "$PGDATA")
-    EXISTING_PGDATA_OWNER_GROUP=$(stat -c "%u:%g" "$PGDATA")
+    EXISTING_PGDATA_PERMISSIONS=$(stat -c %a "$PGAUTO_SOURCE_PGDATA")
+    EXISTING_PGDATA_OWNER_GROUP=$(stat -c "%u:%g" "$PGAUTO_SOURCE_PGDATA")
 
-    if [ -f "${PGDATA}/postgresql.conf" ]; then
+    if [ -f "${PGAUTO_SOURCE_PGDATA}/postgresql.conf" ]; then
         EXISTING_POSTGRESQL_CONF=1
     else
         echo "-------------------------------------------------------------------------------"
         echo "The Postgres data directory at ${PGDATA} is missing a postgresql.conf file. Copying a standard version of ours."
         echo "-------------------------------------------------------------------------------"
-        cp -f /opt/pgautoupgrade/postgresql.conf "${PGDATA}/postgresql.conf"
+        cp -f /opt/pgautoupgrade/postgresql.conf "${PGAUTO_SOURCE_PGDATA}/postgresql.conf"
     fi
 
-    if [ -f "${PGDATA}/pg_hba.conf" ]; then
+    if [ -f "${PGAUTO_SOURCE_PGDATA}/pg_hba.conf" ]; then
         EXISTING_PG_HBA_CONF=1
     else
         echo "-------------------------------------------------------------------------------"
         echo "The Postgres data directory at ${PGDATA} is missing a pg_hba.conf file. Copying a standard version of ours."
         echo "-------------------------------------------------------------------------------"
-        cp -f "/opt/pgautoupgrade/pg_hba.conf" "${PGDATA}/pg_hba.conf"
+        cp -f "/opt/pgautoupgrade/pg_hba.conf" "${PGAUTO_SOURCE_PGDATA}/pg_hba.conf"
     fi
-elif [ "x${PGAUTO_ONESHOT}" = "xyes" ] && [ ! -f "/var/lib/postgresql/PG_VERSION" ]; then
+elif [ "x${PGAUTO_ONESHOT}" = "xyes" ]; then
     echo "-------------------------------------------------------------------------------"
     echo "No existing Postgres data directory found at ${PGDATA}, and one shot mode was requested. Exiting."
     echo "-------------------------------------------------------------------------------"

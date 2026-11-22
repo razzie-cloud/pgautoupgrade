@@ -35,6 +35,32 @@ _is_sourced() {
 		&& [ "${FUNCNAME[1]}" = 'source' ]
 }
 
+# Find an existing cluster when PG18+ changes the default data directory for each major.
+docker_find_database() {
+	PGTARGET_MAJOR=${PGTARGET%%.*}
+	PGAUTO_SOURCE_PGDATA=$PGDATA
+	MOVING_TO_NEW_STRUCTURE=0
+	if [ "$PGTARGET_MAJOR" -ge 18 ] && [[ "$PGDATA" == */"${PGTARGET_MAJOR}"/docker ]] && [ ! -s "$PGDATA/PG_VERSION" ]; then
+		local root=${PGDATA%/"${PGTARGET_MAJOR}"/docker}
+		local candidate
+		for candidate in "$root" "$root"/[0-9]*/docker; do
+			[ -s "$candidate/PG_VERSION" ] || continue
+			if [ "$PGAUTO_SOURCE_PGDATA" != "$PGDATA" ]; then
+				echo "Multiple PostgreSQL data directories found under ${root}. Aborting."
+				exit 9
+			fi
+			PGAUTO_SOURCE_PGDATA=$candidate
+		done
+	fi
+	if [ "$PGAUTO_SOURCE_PGDATA" != "$PGDATA" ]; then
+		MOVING_TO_NEW_STRUCTURE=1
+		if [ -f "$PGAUTO_SOURCE_PGDATA/upgrade_in_progress.lock" ]; then
+			echo "Upgrade lock file already exists in ${PGAUTO_SOURCE_PGDATA}. Aborting."
+			exit 1
+		fi
+	fi
+}
+
 # used to create initial postgres directories and if run as root, ensure ownership to the "postgres" user
 docker_create_db_directories() {
 	local user; user="$(id -u)"
@@ -59,7 +85,7 @@ docker_create_db_directories() {
 	# allow the container to be started with `--user`
 	if [ "$user" = '0' ]; then
 		if [ $MOVING_TO_NEW_STRUCTURE -eq 1 ]; then
-			find "/var/lib/postgresql" \! -user postgres -exec chown postgres '{}' +
+			find "$PGAUTO_SOURCE_PGDATA" "$PGDATA" \! -user postgres -exec chown postgres '{}' +
 		else
 			find "$PGDATA" \! -user postgres -exec chown postgres '{}' +
 		fi
@@ -238,7 +264,7 @@ docker_setup_env() {
 
 	declare -g DATABASE_ALREADY_EXISTS
 	# look specifically for PG_VERSION, as it is expected in the DB dir
-	if [ -s "$PGDATA/PG_VERSION" ]; then
+	if [ -s "$PGAUTO_SOURCE_PGDATA/PG_VERSION" ]; then
 		DATABASE_ALREADY_EXISTS='true'
 	fi
 }
@@ -342,13 +368,8 @@ _main() {
 	fi
 
 	if [ "$1" = 'postgres' ] && ! _pg_want_help "$@"; then
+		docker_find_database
 		docker_setup_env
-
-		PGTARGET_MAJOR=${PGTARGET%%.*}
-		MOVING_TO_NEW_STRUCTURE=0
-		if [ -s "/var/lib/postgresql/PG_VERSION" ] && [ "$PGTARGET_MAJOR" -eq 18 ] && [ "$PGDATA" == "/var/lib/postgresql/18/docker" ]; then
-			MOVING_TO_NEW_STRUCTURE=1
-		fi
 
 		# setup data directories and permissions (when run as root)
 		docker_create_db_directories
@@ -412,31 +433,25 @@ _main() {
 		# Get the version of the PostgreSQL data files
 		local PGVER=${PGTARGET%%.*}
 
-		if [ $MOVING_TO_NEW_STRUCTURE -eq 1 ]; then
-			PGVER=$(cat "/var/lib/postgresql/PG_VERSION")
-		elif [ -s "${PGDATA}/PG_VERSION" ]; then
-			PGVER=$(cat "${PGDATA}/PG_VERSION")
+		if [ -s "${PGAUTO_SOURCE_PGDATA}/PG_VERSION" ]; then
+			PGVER=$(cat "${PGAUTO_SOURCE_PGDATA}/PG_VERSION")
 		fi
 
 		# If the version of PostgreSQL data files doesn't match our desired version, then upgrade them
 		if [ "${PGVER}" != "${PGTARGET_MAJOR}" ]; then
 			# Ensure the database files are a version we can upgrade
-			local RECOGNISED=0
-			local OLDPATH=unset
-			if [ "${PGTARGET_MAJOR}" -gt 16 ] && [ "${PGVER}" = "16" ]; then
-				RECOGNISED=1
-			fi
-			if [ "${PGTARGET_MAJOR}" -gt 17 ] && [ "${PGVER}" = "17" ]; then
-				RECOGNISED=1
-			fi
-			if [ "${RECOGNISED}" -eq 1 ]; then
-				OLDPATH="/usr/local-pg${PGVER}"
+			local OLDPATH="/usr/local-pg${PGVER}"
+			if [[ "$PGVER" =~ ^[1-9][0-9]*$ ]] && [ "$PGVER" -ge 16 ] && [ "$PGVER" -lt "$PGTARGET_MAJOR" ]; then
+				if [ ! -x "${OLDPATH}/bin/postgres" ]; then
+					echo "PostgreSQL ${PGVER} upgrade binaries are missing from this image. Aborting."
+					exit 9
+				fi
 				echo "*******************************************************************************************"
 				echo "Performing PG upgrade on version ${PGVER} database files.  Upgrading to version ${PGTARGET}"
 				echo "*******************************************************************************************"
 			else
 				echo "****************************************************************************"
-				echo "Unrecognised version of PostgreSQL database files found, aborting completely"
+				echo "Cannot upgrade PostgreSQL ${PGVER} to ${PGTARGET}. The source must be PostgreSQL 16 or later and older than the target. Aborting."
 				echo "****************************************************************************"
 				exit 9
 			fi
@@ -501,19 +516,12 @@ _main() {
 			echo "-------------------------------------------------------"
 			echo "Moving existing data files into OLD temporary directory"
 			echo "-------------------------------------------------------"
-			if [ $MOVING_TO_NEW_STRUCTURE -eq 0 ]; then
-				find "${PGDATA}" \
-					-mindepth 1 -maxdepth 1 \
-					-not -name "old" \
-					-not -name "upgrade_in_progress.lock" \
-					-exec mv {} "${OLD}/" \;
-			else
-				find /var/lib/postgresql \
-					-mindepth 1 -maxdepth 1 \
-					-not -name 18 \
-					-not -name "upgrade_in_progress.lock" \
-					-exec mv {} "${OLD}/" \;
-			fi
+			find "${PGAUTO_SOURCE_PGDATA}" \
+				-mindepth 1 -maxdepth 1 \
+				-not -name "old" \
+				-not -name "upgrade_in_progress.lock" \
+				-not -path "${PGDATA%/docker}" \
+				-exec mv {} "${OLD}/" \;
 			echo "-------------------------------------------------------------------"
 			echo "Moving existing data files into OLD temporary directory is complete"
 			echo "-------------------------------------------------------------------"
@@ -528,11 +536,7 @@ _main() {
 				echo "********************************************************************"
 				# With a failure at this point we should be able to move the old data back
 				# to its original location
-				if [ $MOVING_TO_NEW_STRUCTURE -eq 0 ]; then
-					mv -v "${OLD}"/* "${PGDATA}"
-				else
-					mv -v "${OLD}"/* "/var/lib/postgresql"
-				fi
+				mv -v "${OLD}"/* "${PGAUTO_SOURCE_PGDATA}"
 				rmdir old
 				exit 8
 			fi
@@ -567,8 +571,8 @@ _main() {
 
 				if [ "$DATA_CHECKSUMS_ENABLED" == "on" ]; then
 					DATA_CHECKSUMS_PARAMETER="--data-checksums"
-				elif [ "$PGTARGET_MAJOR" -eq 18 ]; then
-					# Postgres v18 enables data checksums by default and is the only version with this opt-out parameter
+				elif [ "$PGTARGET_MAJOR" -ge 18 ]; then
+					# PostgreSQL 18+ enables data checksums by default.
 					DATA_CHECKSUMS_PARAMETER="--no-data-checksums"
 				fi
 			fi

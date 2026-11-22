@@ -11,7 +11,10 @@ required version of PostgreSQL using `pg_upgrade` with the `--link` option.
 After this, the PostgreSQL server starts and runs as per
 normal. The old cluster data will be removed.
 
-This fork supports PostgreSQL 16 and later.
+This fork supports PostgreSQL 16 and later, with PostgreSQL 19 as the default
+target. Images include PostgreSQL 16, 17 and 18 upgrade binaries. The entrypoint
+accepts newer source versions when their binaries are included; adding a future
+release requires updating the Dockerfiles and CI matrix.
 
 The reason this Docker image is needed, is because the
 official Docker PostgreSQL image has no ability to handle
@@ -46,9 +49,9 @@ Postgres container is based on Debian (see also the section on [Debian vs Alpine
 
 If you instead want to run a specific version of PostgreSQL
 then pick a matching tag on our Docker Hub. For example, to
-use PostgreSQL 18 you can use the `18-alpine` tag:
+use PostgreSQL 19 you can use the `19-alpine` tag:
 
-    pgautoupgrade/pgautoupgrade:18-alpine
+    pgautoupgrade/pgautoupgrade:19-alpine
 
 > [!NOTE]
 > The images available in Github Container Registry are for debugging
@@ -66,7 +69,7 @@ To solve that problem, we have Debian based images available as well.
 To use either of those, choose the version of PostgreSQL you'd
 like to upgrade to, then change your docker image to match:
 
-    pgautoupgrade/pgautoupgrade:18-trixie
+    pgautoupgrade/pgautoupgrade:19-trixie
 
 ### "One shot" mode
 
@@ -131,7 +134,7 @@ initContainers:
     value: /bitnami/postgresql/data
   - name: POSTGRES_PASSWORD
     value: password
-image: pgautoupgrade/pgautoupgrade:18-trixie
+image: pgautoupgrade/pgautoupgrade:19-trixie
 name: upgrade-postgres
 securityContext:
   runAsUser: 0
@@ -242,4 +245,4 @@ to the newest PostgreSQL release, and outputs an obvious
 SUCCESS/FAILURE message for that loop.
 
 The test runs in a loop, testing (in sequence) upgrades from
-PostgreSQL versions 16 and 17, skipping versions at or above the target version.
+PostgreSQL versions 16, 17 and 18, skipping versions at or above the target version.
