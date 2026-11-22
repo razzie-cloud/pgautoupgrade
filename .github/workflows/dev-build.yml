@@ -21,8 +21,6 @@ jobs:
                 include:
                     - flavor: "alpine"
                       alias: "alpine"
-                    - flavor: "trixie"
-                      alias: "debian"
 
         steps:
             - name: Checkout repository
