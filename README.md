@@ -11,6 +11,8 @@ required version of PostgreSQL using `pg_upgrade` with the `--link` option.
 After this, the PostgreSQL server starts and runs as per
 normal. The old cluster data will be removed.
 
+This fork supports PostgreSQL 16 and later.
+
 The reason this Docker image is needed, is because the
 official Docker PostgreSQL image has no ability to handle
 version upgrades, which leaves people to figure it out
@@ -95,9 +97,6 @@ $ docker run --name pgauto -it \
 	<NAME_OF_THE_PGAUTOUPGRADE_IMAGE>
 ```
 
-> [!WARNING]
-> PG v15 and below do not support reindexing system tables in a database concurrently. This means, when we start the indexing operation, database locks are placed which do not allow for any modifications as long as the task is running. We recommend using PG v16 or later where this is not an issue.
-
 ### Upgrading from a Bitnami container
 
 If you used the Postgres image by Bitnami, we have made a couple of adjustments to make this upgrade work as well.
@@ -115,7 +114,7 @@ We use the official Postgres variables, but can map certain things:
 The container has to run as `root` if using `one shot` mode, otherwise we are unable to restore the existing file permissions of your Postgres data directory. You can run the container as user `999`, but then you will have to manually apply the file permissions to your Postgres data directory.
 
 > [!WARNING]
-> As of writing this paragraph (5th of October, 2025), we tested upgrading from Bitnami Postgres v9.5, v9.6, v10, v11, v12, v13, v14, v15, v16, v17 to v17 and v18. For these versions, we used the latest available container version from [Bitnami Legacy](https://hub.docker.com/r/bitnamilegacy/postgresql/). Bitnami's script and directory structure could change over time. If you note any issues upgrading from other versions, please provide the exact SHA of the image so we can try to replicate the issue. Also note we do not have any access to Bitnami Secure Images.
+> Historical Bitnami testing (5th of October, 2025) included Postgres v16 and v17 upgrades to newer v17 and v18 targets, using the latest available container version from [Bitnami Legacy](https://hub.docker.com/r/bitnamilegacy/postgresql/). This fork requires PostgreSQL 16 or later. Bitnami's script and directory structure could change over time. If you note any issues upgrading from other versions, please provide the exact SHA of the image so we can try to replicate the issue. Also note we do not have any access to Bitnami Secure Images.
 
 ### One-shot mode in Kubernetes
 
@@ -243,4 +242,4 @@ to the newest PostgreSQL release, and outputs an obvious
 SUCCESS/FAILURE message for that loop.
 
 The test runs in a loop, testing (in sequence) upgrades from
-PostgreSQL versions 9.5, 9.6, 10.x, 11.x, 12.x, 13.x, 14.x, 15.x., 16.x and 17.x.
+PostgreSQL versions 16 and 17, skipping versions at or above the target version.

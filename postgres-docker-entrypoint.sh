@@ -423,18 +423,6 @@ _main() {
 			# Ensure the database files are a version we can upgrade
 			local RECOGNISED=0
 			local OLDPATH=unset
-			if [ "${PGVER}" = "9.5" ] || [ "${PGVER}" = "9.6" ] || [ "${PGVER}" = "10" ] || [ "${PGVER}" = "11" ] || [ "${PGVER}" = "12" ]; then
-				RECOGNISED=1
-			fi
-			if [ "${PGTARGET_MAJOR}" -gt 13 ] && [ "${PGVER}" = "13" ]; then
-				RECOGNISED=1
-			fi
-			if [ "${PGTARGET_MAJOR}" -gt 14 ] && [ "${PGVER}" = "14" ]; then
-				RECOGNISED=1
-			fi
-			if [ "${PGTARGET_MAJOR}" -gt 15 ] && [ "${PGVER}" = "15" ]; then
-				RECOGNISED=1
-			fi
 			if [ "${PGTARGET_MAJOR}" -gt 16 ] && [ "${PGVER}" = "16" ]; then
 				RECOGNISED=1
 			fi

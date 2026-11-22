@@ -76,14 +76,6 @@ jobs:
                   platforms: linux/amd64,linux/arm64
                   cache-to: type=inline
                   cache-from: |
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-9.5-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-9.6-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-10-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-11-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-12-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-13-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-14-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-15-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-16-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-17-${{ matrix.flavor }}
                     type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ matrix.alias }}

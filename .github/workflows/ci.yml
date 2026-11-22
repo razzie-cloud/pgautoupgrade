@@ -23,14 +23,6 @@ jobs:
           - alpine
           - trixie
         pg_version:
-          - "9.5"
-          - "9.6"
-          - "10"
-          - "11"
-          - "12"
-          - "13"
-          - "14"
-          - "15"
           - "16"
           - "17"
 
@@ -69,14 +61,6 @@ jobs:
       # but still use our public caches in any case
       # they might be outdated, in which case a full rebuild will be triggered
       CACHE_FROM: |
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-9.5-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-9.6-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-10-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-11-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-12-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-13-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-14-${{ matrix.operating_system.flavor }}
-        type=registry,ref=pgautoupgrade/pgautoupgrade:build-15-${{ matrix.operating_system.flavor }}
         type=registry,ref=pgautoupgrade/pgautoupgrade:build-16-${{ matrix.operating_system.flavor }}
         type=registry,ref=pgautoupgrade/pgautoupgrade:build-17-${{ matrix.operating_system.flavor }}
         type=registry,ref=pgautoupgrade/pgautoupgrade:${{ matrix.pg_target.PG_VERSION }}-${{ matrix.operating_system.flavor }}
@@ -93,10 +77,6 @@ jobs:
           - flavor: "trixie"
             alias: "debian"
         pg_target:
-          - # renovate: datasource=repology depName=homebrew/postgresql@14 versioning=loose
-            PG_VERSION: "14.24"
-          - # renovate: datasource=repology depName=homebrew/postgresql@15 versioning=loose
-            PG_VERSION: "15.19"
           - # renovate: datasource=repology depName=homebrew/postgresql@16 versioning=loose
             PG_VERSION: "16.15"
           - # renovate: datasource=repology depName=homebrew/postgresql@17 versioning=loose
