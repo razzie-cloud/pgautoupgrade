@@ -188,6 +188,11 @@ This will take a few minutes to create the "pgautoupgrade:local"
 docker image, that you can use in your docker-compose.yml
 files.
 
+The dev workflow builds Alpine and Debian images for AMD64 and ARM64. It compiles
+only PostgreSQL 16, 17 and 18, and keeps intermediate build stages in a separate
+registry cache for each branch and image flavor. The first build populates this
+cache; later builds can reuse the compiled binaries when only scripts change.
+
 ### Customising the image
 
 [Our wiki](https://github.com/pgautoupgrade/docker-pgautoupgrade/wiki)

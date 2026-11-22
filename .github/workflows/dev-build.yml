@@ -60,7 +60,7 @@ jobs:
 
             # Build and push container images
             # https://github.com/docker/build-push-action
-            - name: Build and push ${{ matrix.tag_suffix }} image
+            - name: Build and push ${{ matrix.alias }} image
               uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
               env:
                 BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -74,8 +74,11 @@ jobs:
                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.HEAD_SHA }}-${{ matrix.alias }}
                   labels: ${{ steps.meta.outputs.labels }}
                   platforms: linux/amd64,linux/arm64
-                  cache-to: type=inline
+                  cache-to: |
+                    type=inline
+                    type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ env.BRANCH_NAME }}-${{ matrix.alias }},mode=max
                   cache-from: |
+                    type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ env.BRANCH_NAME }}-${{ matrix.alias }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-16-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-17-${{ matrix.flavor }}
                     type=registry,ref=pgautoupgrade/pgautoupgrade:build-18-${{ matrix.flavor }}
