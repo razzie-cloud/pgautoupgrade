@@ -33,9 +33,9 @@ jobs:
             alias: "debian"
         pg_target:
           - # renovate: datasource=repology depName=homebrew/postgresql@16 versioning=loose
-            PG_VERSION: "16.15"
+            PG_VERSION: "16.16"
           - # renovate: datasource=repology depName=homebrew/postgresql@17 versioning=loose
-            PG_VERSION: "17.11"
+            PG_VERSION: "17.12"
           - # renovate: datasource=repology depName=homebrew/postgresql@18 versioning=loose
             PG_VERSION: "18.7"
           - # renovate: datasource=repology depName=homebrew/postgresql@19 versioning=loose
@@ -95,6 +95,12 @@ jobs:
         env:
           PGTARGET: ${{ matrix.pg_target.PG_VERSION }}
           OS_FLAVOR: ${{ matrix.operating_system.flavor }}
+
+      - name: Print container logs on failure
+        if: failure()
+        run: |
+          docker compose -f test/docker-compose-pgauto.yml logs --no-color
+          sudo find test/postgres-data -type f -path '*/pg_upgrade_output.d/*/log/*' -exec grep -nH -C 5 -E 'ERROR|FATAL|error:' {} + || true
 
       # otherwise, we run into space problems
       # from observation, the buildx builder container already occupies 7 GB out of the 14 GB we have available on a GitHub Actions runner
