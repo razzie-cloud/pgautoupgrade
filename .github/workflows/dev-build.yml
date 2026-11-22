@@ -77,8 +77,5 @@ jobs:
                     type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ env.BRANCH_NAME }}-${{ matrix.alias }},mode=max
                   cache-from: |
                     type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ env.BRANCH_NAME }}-${{ matrix.alias }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-16-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-17-${{ matrix.flavor }}
-                    type=registry,ref=pgautoupgrade/pgautoupgrade:build-18-${{ matrix.flavor }}
                     type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BRANCH_NAME }}-${{ matrix.alias }}
                     type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.HEAD_SHA }}-${{ matrix.alias }}

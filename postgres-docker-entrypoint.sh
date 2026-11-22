@@ -342,10 +342,15 @@ _pg_want_help() {
 }
 
 get_bin_path() {
+  local version=${1:-${PGTARGET%%.*}}
   if [ -f /etc/alpine-release ]; then
-    echo "/usr/local/bin"
+    if [ "$version" = "${PGTARGET%%.*}" ]; then
+      echo "/usr/local/bin"
+    else
+      echo "/usr/libexec/postgresql${version}"
+    fi
   else
-    echo "/usr/lib/postgresql/${PGTARGET%%.*}/bin"
+    echo "/usr/lib/postgresql/${version}/bin"
   fi
 }
 
@@ -440,9 +445,10 @@ _main() {
 		# If the version of PostgreSQL data files doesn't match our desired version, then upgrade them
 		if [ "${PGVER}" != "${PGTARGET_MAJOR}" ]; then
 			# Ensure the database files are a version we can upgrade
-			local OLDPATH="/usr/local-pg${PGVER}"
+			local OLD_BIN_PATH
 			if [[ "$PGVER" =~ ^[1-9][0-9]*$ ]] && [ "$PGVER" -ge 16 ] && [ "$PGVER" -lt "$PGTARGET_MAJOR" ]; then
-				if [ ! -x "${OLDPATH}/bin/postgres" ]; then
+				OLD_BIN_PATH=$(get_bin_path "$PGVER")
+				if [ ! -x "${OLD_BIN_PATH}/postgres" ]; then
 					echo "PostgreSQL ${PGVER} upgrade binaries are missing from this image. Aborting."
 					exit 9
 				fi
@@ -567,7 +573,7 @@ _main() {
 			local DATA_CHECKSUMS_PARAMETER
 
 			if [[ -z "$POSTGRES_INITDB_ARGS" || "$POSTGRES_INITDB_ARGS" != *"data-checksums"* ]]; then
-				DATA_CHECKSUMS_ENABLED=$(echo 'SHOW DATA_CHECKSUMS' | "${OLDPATH}/bin/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'data_checksums = "' | cut -d '"' -f 2)
+				DATA_CHECKSUMS_ENABLED=$(echo 'SHOW DATA_CHECKSUMS' | "${OLD_BIN_PATH}/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'data_checksums = "' | cut -d '"' -f 2)
 
 				if [ "$DATA_CHECKSUMS_ENABLED" == "on" ]; then
 					DATA_CHECKSUMS_PARAMETER="--data-checksums"
@@ -602,13 +608,13 @@ _main() {
 				local CTYPE=unset
 				local ENCODING=unset
 				
-				ENCODING=$(echo 'SHOW SERVER_ENCODING' | "${OLDPATH}/bin/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'server_encoding = "' | cut -d '"' -f 2)
+				ENCODING=$(echo 'SHOW SERVER_ENCODING' | "${OLD_BIN_PATH}/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'server_encoding = "' | cut -d '"' -f 2)
 
 				# LC_COLLATE and LC_TYPE have been removed with PG v16
 				# https://www.postgresql.org/docs/release/16.0/
 				if [ "$PGTARGET_MAJOR" -lt 16 ]; then
-					COLLATE=$(echo 'SHOW LC_COLLATE' | "${OLDPATH}/bin/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'lc_collate = "' | cut -d '"' -f 2)
-					CTYPE=$(echo 'SHOW LC_CTYPE' | "${OLDPATH}/bin/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'lc_ctype = "' | cut -d '"' -f 2)
+					COLLATE=$(echo 'SHOW LC_COLLATE' | "${OLD_BIN_PATH}/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'lc_collate = "' | cut -d '"' -f 2)
+					CTYPE=$(echo 'SHOW LC_CTYPE' | "${OLD_BIN_PATH}/postgres" --single "${run_options[@]}" -D "${OLD}" "${POSTGRES_DB}" | grep 'lc_ctype = "' | cut -d '"' -f 2)
 
 					POSTGRES_INITDB_ARGS="--locale=${COLLATE} --lc-collate=${COLLATE} --lc-ctype=${CTYPE} --encoding=${ENCODING} ${DATA_CHECKSUMS_PARAMETER}"
 				else
@@ -643,7 +649,7 @@ _main() {
 			export PGPASSWORD="${PGPASSWORD:-$POSTGRES_PASSWORD}"
 			"${bin_path}/pg_upgrade" --username="${POSTGRES_USER}" --link \
 			  --old-datadir "${OLD}" --new-datadir "${NEW}" \
-			  --old-bindir "${OLDPATH}/bin" --new-bindir "${bin_path}" \
+			  --old-bindir "${OLD_BIN_PATH}" --new-bindir "${bin_path}" \
 			  --socketdir="/var/run/postgresql" \
 			  --old-options "${run_options[*]}" --new-options "${run_options[*]}"
 			unset PGPASSWORD

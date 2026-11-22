@@ -12,14 +12,17 @@ for version in 16 17 18 19 20; do
     chmod +x "$TEST_ROOT/bin/$version/bin/postgres"
 done
 
+PGTARGET=19.0
+if [ -f /etc/alpine-release ]; then
+    [ "$(get_bin_path)" = /usr/local/bin ]
+    [ "$(get_bin_path 16)" = /usr/libexec/postgresql16 ]
+else
+    [ "$(get_bin_path)" = /usr/lib/postgresql/19/bin ]
+    [ "$(get_bin_path 16)" = /usr/lib/postgresql/16/bin ]
+fi
+
 # Mock installed binaries and container ownership; stop after moving the test data.
-[() {
-    if [[ "$1" == '!' && "$2" == -x && "$3" == /usr/local-pg*/bin/postgres ]]; then
-        builtin [ ! -x "$TEST_ROOT/bin/${3#/usr/local-pg}" ]
-    else
-        builtin [ "$@"
-    fi
-}
+get_bin_path() { echo "$TEST_ROOT/bin/${1:-${PGTARGET%%.*}}/bin"; }
 id() { echo 1000; }
 docker_create_db_directories() { command mkdir -p "$PGDATA"; }
 mkdir() {

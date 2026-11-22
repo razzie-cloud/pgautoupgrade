@@ -1,95 +1,28 @@
 # renovate: datasource=repology depName=homebrew/postgresql@19 versioning=loose
 ARG PGTARGET=19.0
 
-### Things we need in all build containers
-FROM debian:trixie AS base-build
-
-# renovate: datasource=repology depName=homebrew/postgresql@16 versioning=loose
-ENV PG16_VERSION=16.15
-
-# renovate: datasource=repology depName=homebrew/postgresql@17 versioning=loose
-ENV PG17_VERSION=17.12
-
-# renovate: datasource=repology depName=homebrew/postgresql@18 versioning=loose
-ENV PG18_VERSION=18.7
-
-# Where we'll do all our compiling and similar
-ENV BUILD_ROOT=/buildroot
-
-# Make the directory for building, and set it as the default for the following Docker commands
-RUN mkdir ${BUILD_ROOT}
-WORKDIR ${BUILD_ROOT}
-
-# Install things needed for development
-RUN apt update && \
-  apt install -y build-essential libicu-dev liblz4-dev locales tzdata zlib1g-dev libzstd-dev wget pkg-config && \
-  apt clean
-
-### PostgreSQL 16
-FROM base-build AS build-16
-
-RUN wget https://ftp.postgresql.org/pub/source/v${PG16_VERSION}/postgresql-${PG16_VERSION}.tar.gz && \
-  tar -xf postgresql-16*.tar.gz
-
-RUN cd postgresql-16.* && \
-  ./configure --prefix=/usr/local-pg16 --with-openssl=no --without-readline --with-icu --with-lz4 --with-system-tzdata=/usr/share/zoneinfo --enable-debug=no CFLAGS="-Os" && \
-  make -j $(nproc) world-bin && \
-  make install-world-bin && \
-  rm -rf /usr/local-pg16/include
-
-### PostgreSQL 17
-FROM base-build AS build-17
-
-RUN apt update && \
-  apt install -y bison flex && \
-  apt clean
-
-RUN wget https://ftp.postgresql.org/pub/source/v${PG17_VERSION}/postgresql-${PG17_VERSION}.tar.gz && \
-  tar -xf postgresql-17*.tar.gz
-
-RUN cd postgresql-17.* && \
-  ./configure --prefix=/usr/local-pg17 --with-openssl=no --without-readline --with-icu --with-lz4 --with-system-tzdata=/usr/share/zoneinfo --enable-debug=no CFLAGS="-Os" && \
-  make -j $(nproc) world-bin && \
-  make install-world-bin && \
-  rm -rf /usr/local-pg17/include
-
-### PostgreSQL 18
-FROM base-build AS build-18
-
-RUN apt update && \
-  apt install -y bison flex && \
-  apt clean
-
-RUN wget https://ftp.postgresql.org/pub/source/v${PG18_VERSION}/postgresql-${PG18_VERSION}.tar.gz && \
-  tar -xf postgresql-18*.tar.gz
-
-RUN cd postgresql-18.* && \
-  ./configure --prefix=/usr/local-pg18 --with-openssl=no --without-readline --with-icu --with-lz4 --with-system-tzdata=/usr/share/zoneinfo --enable-debug=no CFLAGS="-Os" && \
-  make -j $(nproc) world-bin && \
-  make install-world-bin && \
-  rm -rf /usr/local-pg18/include
-
 # Use the PostgreSQL Trixie image as our output image base
 FROM postgres:${PGTARGET}-trixie
+
+ARG PGTARGET
+
+# The official image already configures PGDG and disables automatic cluster creation.
+RUN set -eux; \
+  packages=""; \
+  version=16; \
+  while [ "$version" -lt "${PGTARGET%%.*}" ]; do \
+    packages="$packages postgresql-$version"; \
+    version=$((version + 1)); \
+  done; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends $packages icu-devtools locales tzdata; \
+  rm -rf /var/lib/apt/lists/*
 
 # Copy default configuration in case the original container does not provide it (Bitnami ...)
 RUN mkdir -p /opt/pgautoupgrade && \
   chmod 660 /opt/pgautoupgrade && \
   chown 999:999 /opt/pgautoupgrade
 COPY --chown=999 postgresql.conf pg_hba.conf /opt/pgautoupgrade/
-
-# We need to define this here, to make the above PGTARGET available after the FROM
-ARG PGTARGET
-
-# Copy across our compiled files
-COPY --from=build-16 /usr/local-pg16 /usr/local-pg16
-COPY --from=build-17 /usr/local-pg17 /usr/local-pg17
-COPY --from=build-18 /usr/local-pg18 /usr/local-pg18
-
-# Install locale
-RUN apt update && \
-  apt install -y icu-devtools locales tzdata && \
-  apt clean
 
 # Pass the PG build target through to the running image
 ENV PGTARGET=${PGTARGET}

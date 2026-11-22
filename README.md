@@ -12,9 +12,9 @@ After this, the PostgreSQL server starts and runs as per
 normal. The old cluster data will be removed.
 
 This fork supports PostgreSQL 16 and later, with PostgreSQL 19 as the default
-target. Images include PostgreSQL 16, 17 and 18 upgrade binaries. The entrypoint
-accepts newer source versions when their binaries are included; adding a future
-release requires updating the Dockerfiles and CI matrix.
+target. PG19 images include PostgreSQL 16, 17 and 18 upgrade binaries. The image build
+installs server packages for each major version from 16 up to, but excluding, the
+target. Future targets require those packages to be available and a CI matrix update.
 
 The reason this Docker image is needed, is because the
 official Docker PostgreSQL image has no ability to handle
@@ -188,10 +188,11 @@ This will take a few minutes to create the "pgautoupgrade:local"
 docker image, that you can use in your docker-compose.yml
 files.
 
-The dev workflow builds Alpine images for AMD64 and ARM64. It compiles
-only PostgreSQL 16, 17 and 18, and keeps intermediate build stages in a separate
-registry cache for each branch and image flavor. The first build populates this
-cache; later builds can reuse the compiled binaries when only scripts change.
+The dev workflow builds Alpine images for AMD64 and ARM64. Old PostgreSQL servers
+and their bundled extensions are installed from Alpine packages; Debian images use
+the PGDG APT repository configured by the official base image. No PostgreSQL source
+compilation is needed. The dev workflow keeps a registry cache for each branch and
+image flavor so later builds can reuse the installed packages when only scripts change.
 
 ### Customising the image
 

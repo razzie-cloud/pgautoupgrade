@@ -33,6 +33,9 @@ import_adventure_works() {
     docker compose -f "docker-compose-pg${VERSION}.yml" exec postgres createdb -U postgres AdventureWorks
     cat AdventureWorks.sql | docker compose -f "docker-compose-pg${VERSION}.yml" exec --no-TTY postgres psql -U postgres -d AdventureWorks > /dev/null 2>&1
 
+    # Exercise a bundled extension so upgrades also verify the package's shared libraries.
+    docker compose -f "docker-compose-pg${VERSION}.yml" exec --no-TTY postgres psql -U postgres -d AdventureWorks -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS hstore;'
+
     # Shutdown the existing version
     docker compose -f "docker-compose-pg${VERSION}.yml" down -v
 }
